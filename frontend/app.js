@@ -165,7 +165,7 @@ function updateAuthUI() {
     document.getElementById('authBtn').style.background = 'linear-gradient(135deg, #fce4ec, #f8bbd9)';
     document.getElementById('authBtn').style.color = '#c4134a';
   } else {
-    btn.textContent = 'Login';
+    btn.textContent = 'Login / Register';
     document.getElementById('authBtn').style.background = '';
     document.getElementById('authBtn').style.color = '';
   }
@@ -283,9 +283,20 @@ function filterCategory(cat, btn) {
 
   document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.eggless-pill').forEach(p => p.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    // Find matching category pill
+    document.querySelectorAll('.cat-pill').forEach(p => {
+      if (p.textContent.toLowerCase().includes(cat.toLowerCase())) {
+        p.classList.add('active');
+      }
+    });
+  }
 
-  document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+  const prodSection = document.getElementById('products');
+  if (prodSection) prodSection.scrollIntoView({ behavior: 'smooth' });
   loadProducts();
 }
 
@@ -370,10 +381,19 @@ function toggleCart() {
   const drawer = document.getElementById('cartDrawer');
   const overlay = document.getElementById('cartOverlay');
   const isOpen = drawer.classList.contains('open');
-  drawer.classList.toggle('open', !isOpen);
-  drawer.classList.toggle('hidden', isOpen);
-  overlay.classList.toggle('hidden', isOpen);
-  if (!isOpen) renderCartItems();
+  if (isOpen) {
+    drawer.classList.remove('open');
+    overlay.classList.add('hidden');
+    drawer.classList.add('hidden');
+  } else {
+    drawer.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    // Allow paint before adding open class for smooth slide
+    requestAnimationFrame(() => {
+      drawer.classList.add('open');
+    });
+    renderCartItems();
+  }
 }
 
 function renderCartItems() {
