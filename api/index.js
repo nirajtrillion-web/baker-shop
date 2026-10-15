@@ -119,84 +119,125 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// ── PRODUCTS DATA & FALLBACK ──
+const defaultProducts = [
+  { id: 1, name: 'Chocolate Truffle', category: 'Chocolate', price: 599, weight: '500g', rating: 4.8, reviews: 2341, tag: 'Bestseller', image: '/images/chocolate_truffle.jpg', description: 'Rich dark chocolate ganache with premium Belgian chocolate layers and raspberry accents.', eggless: true, deliveryTime: 'Same Day' },
+  { id: 2, name: 'Strawberry Dream', category: 'Fruit', price: 649, weight: '500g', rating: 4.7, reviews: 1876, tag: 'New', image: '/images/strawberry_dream.jpg', description: 'Fresh strawberry cream cake with edible flowers and mirror glaze finish.', eggless: true, deliveryTime: 'Same Day' },
+  { id: 3, name: 'Red Velvet Delight', category: 'Classic', price: 699, weight: '500g', rating: 4.9, reviews: 3102, tag: 'Bestseller', image: '/images/red_velvet.jpg', description: 'Classic red velvet with cream cheese frosting and vivid crimson layers.', eggless: false, deliveryTime: 'Same Day' },
+  { id: 4, name: 'Black Forest', category: 'Chocolate', price: 549, weight: '500g', rating: 4.6, reviews: 1654, tag: '', image: '/images/black_forest.jpg', description: 'Dark chocolate sponge with whipped cream, cherries and chocolate shavings.', eggless: true, deliveryTime: 'Same Day' },
+  { id: 5, name: 'Butterscotch Heaven', category: 'Classic', price: 499, weight: '500g', rating: 4.5, reviews: 987, tag: '', image: '/images/butterscotch.jpg', description: 'Creamy butterscotch cake with caramel drizzle and crunchy butterscotch chips.', eggless: true, deliveryTime: 'Same Day' },
+  { id: 6, name: 'Tropical Pineapple', category: 'Fruit', price: 499, weight: '500g', rating: 4.4, reviews: 762, tag: '', image: '/images/pineapple.jpg', description: 'Light vanilla sponge with pineapple cream and fresh tropical fruit topping.', eggless: true, deliveryTime: 'Same Day' },
+  { id: 7, name: 'Pinata Party Cake', category: 'Trending', price: 1299, weight: '1kg', rating: 4.9, reviews: 2891, tag: 'Trending', image: '/images/pinata.jpg', description: 'Surprise smash cake filled with rainbow candy, chocolates and sprinkles inside.', eggless: false, deliveryTime: 'Next Day' },
+  { id: 8, name: 'Designer Fondant', category: 'Wedding', price: 2499, weight: '2kg', rating: 5.0, reviews: 543, tag: 'Premium', image: '/images/fondant.jpg', description: 'Two-tier marble fondant wedding cake with sugar flowers and gold leaf details.', eggless: true, deliveryTime: 'Pre-Order' }
+];
+
+function filterAndSortProducts(products, { category, eggless, search, sort }) {
+  let list = [...products];
+  if (category && category !== 'All') {
+    list = list.filter(p => p.category.toLowerCase() === category.toLowerCase());
+  }
+  if (eggless === 'true') {
+    list = list.filter(p => p.eggless === true);
+  }
+  if (search) {
+    const s = search.trim().toLowerCase();
+    list = list.filter(p => p.name.toLowerCase().includes(s));
+  }
+  if (sort === 'price_asc') list.sort((a, b) => a.price - b.price);
+  else if (sort === 'price_desc') list.sort((a, b) => b.price - a.price);
+  else if (sort === 'rating') list.sort((a, b) => b.rating - a.rating);
+  else if (sort === 'popular') list.sort((a, b) => b.reviews - a.reviews);
+  return list;
+}
+
 // ── PRODUCTS ROUTES ──
 app.get('/api/products', async (req, res) => {
   try {
-    const { category, eggless, search, sort } = req.query;
-    let query = 'SELECT * FROM public.products WHERE 1=1';
-    const params = [];
+    if (process.env.DATABASE_URL) {
+      const { category, eggless, search, sort } = req.query;
+      let query = 'SELECT * FROM public.products WHERE 1=1';
+      const params = [];
 
-    if (category && category !== 'All') {
-      params.push(category);
-      query += ` AND LOWER(category) = LOWER($${params.length})`;
+      if (category && category !== 'All') {
+        params.push(category);
+        query += ` AND LOWER(category) = LOWER($${params.length})`;
+      }
+
+      if (eggless === 'true') {
+        query += ` AND eggless = true`;
+      }
+
+      if (search) {
+        params.push(`%${search.trim().toLowerCase()}%`);
+        query += ` AND LOWER(name) LIKE $${params.length}`;
+      }
+
+      if (sort === 'price_asc') query += ' ORDER BY price ASC';
+      else if (sort === 'price_desc') query += ' ORDER BY price DESC';
+      else if (sort === 'rating') query += ' ORDER BY rating DESC';
+      else if (sort === 'popular') query += ' ORDER BY reviews DESC';
+      else query += ' ORDER BY id ASC';
+
+      const result = await pool.query(query, params);
+      if (result && result.rows && result.rows.length > 0) {
+        const products = result.rows.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          price: Number(p.price),
+          weight: p.weight,
+          rating: Number(p.rating),
+          reviews: p.reviews,
+          tag: p.tag || '',
+          image: p.image,
+          description: p.description,
+          eggless: p.eggless,
+          deliveryTime: p.delivery_time || 'Same Day'
+        }));
+        return res.json({ success: true, products, total: products.length });
+      }
     }
-
-    if (eggless === 'true') {
-      query += ` AND eggless = true`;
-    }
-
-    if (search) {
-      params.push(`%${search.trim().toLowerCase()}%`);
-      query += ` AND LOWER(name) LIKE $${params.length}`;
-    }
-
-    if (sort === 'price_asc') query += ' ORDER BY price ASC';
-    else if (sort === 'price_desc') query += ' ORDER BY price DESC';
-    else if (sort === 'rating') query += ' ORDER BY rating DESC';
-    else if (sort === 'popular') query += ' ORDER BY reviews DESC';
-    else query += ' ORDER BY id ASC';
-
-    const result = await pool.query(query, params);
-
-    const products = result.rows.map(p => ({
-      id: p.id,
-      name: p.name,
-      category: p.category,
-      price: Number(p.price),
-      weight: p.weight,
-      rating: Number(p.rating),
-      reviews: p.reviews,
-      tag: p.tag || '',
-      image: p.image,
-      description: p.description,
-      eggless: p.eggless,
-      deliveryTime: p.delivery_time || 'Same Day'
-    }));
-
-    res.json({ success: true, products, total: products.length });
   } catch (err) {
-    console.error('Products fetch error:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.warn('DB query failed, serving default cake catalog:', err.message);
   }
+
+  const fallback = filterAndSortProducts(defaultProducts, req.query);
+  res.json({ success: true, products: fallback, total: fallback.length });
 });
 
 app.get('/api/products/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
   try {
-    const id = parseInt(req.params.id, 10);
-    const result = await pool.query('SELECT * FROM public.products WHERE id = $1', [id]);
-    const p = result.rows[0];
-    if (!p) return res.status(404).json({ success: false, message: 'Product not found' });
-
-    res.json({
-      success: true,
-      product: {
-        id: p.id,
-        name: p.name,
-        category: p.category,
-        price: Number(p.price),
-        weight: p.weight,
-        rating: Number(p.rating),
-        reviews: p.reviews,
-        tag: p.tag || '',
-        image: p.image,
-        description: p.description,
-        eggless: p.eggless,
-        deliveryTime: p.delivery_time || 'Same Day'
+    if (process.env.DATABASE_URL) {
+      const result = await pool.query('SELECT * FROM public.products WHERE id = $1', [id]);
+      const p = result.rows[0];
+      if (p) {
+        return res.json({
+          success: true,
+          product: {
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: Number(p.price),
+            weight: p.weight,
+            rating: Number(p.rating),
+            reviews: p.reviews,
+            tag: p.tag || '',
+            image: p.image,
+            description: p.description,
+            eggless: p.eggless,
+            deliveryTime: p.delivery_time || 'Same Day'
+          }
+        });
       }
-    });
+    }
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.warn('DB product lookup failed, checking default cakes:', err.message);
   }
+
+  const p = defaultProducts.find(item => item.id === id);
+  if (!p) return res.status(404).json({ success: false, message: 'Product not found' });
+  res.json({ success: true, product: p });
 });
 
 // ── ORDERS ROUTES ──

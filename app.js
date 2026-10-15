@@ -171,6 +171,11 @@ function updateAuthUI() {
   }
 }
 
+function getCakeImageUrl(imgPath) {
+  if (!imgPath) return '/images/chocolate_truffle.jpg';
+  return imgPath.startsWith('/') ? imgPath : '/' + imgPath;
+}
+
 // ─────────────────────────────────────────────────
 // Products
 // ─────────────────────────────────────────────────
@@ -186,29 +191,36 @@ async function loadProducts() {
     if (state.sort) params.set('sort', state.sort);
 
     const res = await fetch(API_BASE + '/products?' + params.toString());
+    if (!res.ok) {
+      renderMockProducts();
+      return;
+    }
     const data = await res.json();
 
-    if (data.success) {
+    if (data.success && Array.isArray(data.products) && data.products.length > 0) {
       state.products = data.products;
       renderProducts(data.products);
-      document.getElementById('resultCount').textContent = data.total + ' cakes found';
+      const countEl = document.getElementById('resultCount');
+      if (countEl) countEl.textContent = (data.total || data.products.length) + ' cakes found';
+    } else {
+      renderMockProducts();
     }
   } catch (err) {
-    // Fallback: render mock products if API not running
+    // Fallback: render mock products if API not running or env missing
     renderMockProducts();
   }
 }
 
 function renderMockProducts() {
   const mockProducts = [
-    { id: 1, name: 'Chocolate Truffle', category: 'Chocolate', price: 599, weight: '500g', rating: 4.8, reviews: 2341, tag: 'Bestseller', image: 'images/chocolate_truffle.jpg', description: 'Rich dark chocolate ganache with premium Belgian chocolate layers and raspberry accents.', eggless: true, deliveryTime: 'Same Day' },
-    { id: 2, name: 'Strawberry Dream', category: 'Fruit', price: 649, weight: '500g', rating: 4.7, reviews: 1876, tag: 'New', image: 'images/strawberry_dream.jpg', description: 'Fresh strawberry cream cake with edible flowers and mirror glaze finish.', eggless: true, deliveryTime: 'Same Day' },
-    { id: 3, name: 'Red Velvet Delight', category: 'Classic', price: 699, weight: '500g', rating: 4.9, reviews: 3102, tag: 'Bestseller', image: 'images/red_velvet.jpg', description: 'Classic red velvet with cream cheese frosting and vivid crimson layers.', eggless: false, deliveryTime: 'Same Day' },
-    { id: 4, name: 'Black Forest', category: 'Chocolate', price: 549, weight: '500g', rating: 4.6, reviews: 1654, tag: '', image: 'images/black_forest.jpg', description: 'Dark chocolate sponge with whipped cream, cherries and chocolate shavings.', eggless: true, deliveryTime: 'Same Day' },
-    { id: 5, name: 'Butterscotch Heaven', category: 'Classic', price: 499, weight: '500g', rating: 4.5, reviews: 987, tag: '', image: 'images/butterscotch.jpg', description: 'Creamy butterscotch cake with caramel drizzle and crunchy butterscotch chips.', eggless: true, deliveryTime: 'Same Day' },
-    { id: 6, name: 'Tropical Pineapple', category: 'Fruit', price: 499, weight: '500g', rating: 4.4, reviews: 762, tag: '', image: 'images/pineapple.jpg', description: 'Light vanilla sponge with pineapple cream and fresh tropical fruit topping.', eggless: true, deliveryTime: 'Same Day' },
-    { id: 7, name: 'Pinata Party Cake', category: 'Trending', price: 1299, weight: '1kg', rating: 4.9, reviews: 2891, tag: 'Trending', image: 'images/pinata.jpg', description: 'Surprise smash cake filled with rainbow candy, chocolates and sprinkles inside.', eggless: false, deliveryTime: 'Next Day' },
-    { id: 8, name: 'Designer Fondant', category: 'Wedding', price: 2499, weight: '2kg', rating: 5.0, reviews: 543, tag: 'Premium', image: 'images/fondant.jpg', description: 'Two-tier marble fondant wedding cake with sugar flowers and gold leaf details.', eggless: true, deliveryTime: 'Pre-Order' }
+    { id: 1, name: 'Chocolate Truffle', category: 'Chocolate', price: 599, weight: '500g', rating: 4.8, reviews: 2341, tag: 'Bestseller', image: '/images/chocolate_truffle.jpg', description: 'Rich dark chocolate ganache with premium Belgian chocolate layers and raspberry accents.', eggless: true, deliveryTime: 'Same Day' },
+    { id: 2, name: 'Strawberry Dream', category: 'Fruit', price: 649, weight: '500g', rating: 4.7, reviews: 1876, tag: 'New', image: '/images/strawberry_dream.jpg', description: 'Fresh strawberry cream cake with edible flowers and mirror glaze finish.', eggless: true, deliveryTime: 'Same Day' },
+    { id: 3, name: 'Red Velvet Delight', category: 'Classic', price: 699, weight: '500g', rating: 4.9, reviews: 3102, tag: 'Bestseller', image: '/images/red_velvet.jpg', description: 'Classic red velvet with cream cheese frosting and vivid crimson layers.', eggless: false, deliveryTime: 'Same Day' },
+    { id: 4, name: 'Black Forest', category: 'Chocolate', price: 549, weight: '500g', rating: 4.6, reviews: 1654, tag: '', image: '/images/black_forest.jpg', description: 'Dark chocolate sponge with whipped cream, cherries and chocolate shavings.', eggless: true, deliveryTime: 'Same Day' },
+    { id: 5, name: 'Butterscotch Heaven', category: 'Classic', price: 499, weight: '500g', rating: 4.5, reviews: 987, tag: '', image: '/images/butterscotch.jpg', description: 'Creamy butterscotch cake with caramel drizzle and crunchy butterscotch chips.', eggless: true, deliveryTime: 'Same Day' },
+    { id: 6, name: 'Tropical Pineapple', category: 'Fruit', price: 499, weight: '500g', rating: 4.4, reviews: 762, tag: '', image: '/images/pineapple.jpg', description: 'Light vanilla sponge with pineapple cream and fresh tropical fruit topping.', eggless: true, deliveryTime: 'Same Day' },
+    { id: 7, name: 'Pinata Party Cake', category: 'Trending', price: 1299, weight: '1kg', rating: 4.9, reviews: 2891, tag: 'Trending', image: '/images/pinata.jpg', description: 'Surprise smash cake filled with rainbow candy, chocolates and sprinkles inside.', eggless: false, deliveryTime: 'Next Day' },
+    { id: 8, name: 'Designer Fondant', category: 'Wedding', price: 2499, weight: '2kg', rating: 5.0, reviews: 543, tag: 'Premium', image: '/images/fondant.jpg', description: 'Two-tier marble fondant wedding cake with sugar flowers and gold leaf details.', eggless: true, deliveryTime: 'Pre-Order' }
   ];
 
   let filtered = [...mockProducts];
@@ -216,13 +228,14 @@ function renderMockProducts() {
   if (state.egglessOnly) filtered = filtered.filter(p => p.eggless);
   if (state.searchQuery) filtered = filtered.filter(p => p.name.toLowerCase().includes(state.searchQuery.toLowerCase()));
   if (state.sort === 'price_asc') filtered.sort((a, b) => a.price - b.price);
-  if (state.sort === 'price_desc') filtered.sort((a, b) => b.price - a.price);
-  if (state.sort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
-  if (state.sort === 'popular') filtered.sort((a, b) => b.reviews - a.reviews);
+  else if (state.sort === 'price_desc') filtered.sort((a, b) => b.price - a.price);
+  else if (state.sort === 'rating') filtered.sort((a, b) => b.rating - a.rating);
+  else if (state.sort === 'popular') filtered.sort((a, b) => b.reviews - a.reviews);
 
   state.products = filtered;
   renderProducts(filtered);
-  document.getElementById('resultCount').textContent = filtered.length + ' cakes found';
+  const countEl = document.getElementById('resultCount');
+  if (countEl) countEl.textContent = filtered.length + ' cakes found';
 }
 
 function renderProducts(products) {
@@ -238,12 +251,11 @@ function renderProducts(products) {
   grid.innerHTML = products.map((p, i) => {
     const tagHtml = p.tag ? '<span class="card-tag ' + (tagClasses[p.tag] || 'tag-bestseller') + '">' + p.tag + '</span>' : '';
     const egglessHtml = p.eggless ? '<span class="card-eggless">🌿 Eggless</span>' : '';
-    const stars = '⭐'.repeat(Math.round(p.rating));
-    const imgSrc = (p.image || 'images/chocolate_truffle.jpg').replace(/^\//, '');
+    const imgSrc = getCakeImageUrl(p.image);
 
     return '<div class="product-card" style="animation-delay:' + (i * 0.06) + 's">' +
       '<div class="card-img-wrap">' +
-        '<img src="' + imgSrc + '" alt="' + p.name + '" loading="lazy" onerror="this.src=\'images/chocolate_truffle.jpg\'"/>' +
+        '<img src="' + imgSrc + '" alt="' + p.name + '" loading="lazy" onerror="this.onerror=null;this.src=\'/images/chocolate_truffle.jpg\'"/>' +
         tagHtml + egglessHtml +
         '<button class="card-wishlist" onclick="showToast(\'Added to wishlist!\',\'info\')" title="Add to Wishlist">♡</button>' +
       '</div>' +
@@ -412,9 +424,9 @@ function renderCartItems() {
   footer.classList.remove('hidden');
 
   container.innerHTML = state.cart.map(item => {
-    const imgSrc = (item.image || 'images/chocolate_truffle.jpg').replace(/^\//, '');
+    const imgSrc = getCakeImageUrl(item.image);
     return '<div class="cart-item">' +
-      '<img class="cart-item-img" src="' + imgSrc + '" alt="' + item.name + '" onerror="this.src=\'images/chocolate_truffle.jpg\'"/>' +
+      '<img class="cart-item-img" src="' + imgSrc + '" alt="' + item.name + '" onerror="this.onerror=null;this.src=\'/images/chocolate_truffle.jpg\'"/>' +
       '<div class="cart-item-info">' +
         '<div class="cart-item-name">' + item.name + '</div>' +
         '<div class="cart-item-weight">' + item.weight + '</div>' +
