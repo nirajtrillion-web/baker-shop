@@ -323,4 +323,14 @@ app.get('/api/admin/stats', authenticateToken, async (req, res) => {
   }
 });
 
+// Serve root static files when run locally
+app.use(express.static(path.join(__dirname, '..')));
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`\n🎂 BakerBliss Server running at http://localhost:${PORT}`);
+  });
+}
+
 module.exports = app;

@@ -3,15 +3,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/images/(.*)",
-      "destination": "/images/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/$1"
+      "destination": "/api/index.js"
     }
   ]
 }

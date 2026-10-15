@@ -4,7 +4,7 @@ echo  ===============================
 echo   BakerBliss - Cake Shop Server
 echo  ===============================
 echo.
-echo  Starting backend server...
-cd /d "%~dp0backend"
-node server.js
+echo  Starting server...
+cd /d "%~dp0"
+node api/index.js
 pause

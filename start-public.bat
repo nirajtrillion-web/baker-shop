@@ -5,7 +5,7 @@ echo     BakerBliss - Live Cake Shop Public Server
 echo  ======================================================
 echo.
 echo  Starting backend server...
-start /b cmd /c "cd /d %~dp0backend && node server.js"
+start /b cmd /c "cd /d %~dp0 && node api/index.js"
 timeout /t 3 /nobreak >nul
 
 echo  Starting public tunnel...
